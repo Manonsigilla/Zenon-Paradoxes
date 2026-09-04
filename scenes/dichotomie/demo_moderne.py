@@ -159,16 +159,21 @@ class EtapeDemoModerne(SceneParadoxe):
 
         # Dès que le motif est visible : la conclusion de la démo.
         # En gras (et non en italique) pour que les exposants ⁴ ⁵ ⁶…
-        # restent bien lisibles à cette taille.
+        # restent bien lisibles à cette taille. Le calcul de la limite
+        # est en or plein (le résultat central), les deux lignes qui
+        # l'encadrent en or clair.
         if self.k >= SEUIL_CONCLUSION:
             texte.dessiner_texte(
                 ecran,
                 f"Quand k → +∞ : (1/2){en_exposant(self.k)} → 0, "
                 "donc Sₖ → 1.",
-                x, y + 112, theme.police(18, "gras"), theme.OR_CLAIR)
+                x, y + 110, theme.police(18, "gras"), theme.OR_CLAIR)
             texte.dessiner_texte(
                 ecran,
-                "La somme infinie vaut exactement 1 : "
-                "1/2 + 1/4 + 1/8 + … = 1. La distance est finie : "
-                "le javelot atteint la cible.",
-                x, y + 136, theme.police(18, "gras"), theme.OR_CLAIR)
+                "lim Sₖ = 1 − lim (1/2)ᵏ = 1 − 0 = 1 : "
+                "la somme infinie vaut exactement 1.",
+                x, y + 134, theme.police(18, "gras"), theme.OR)
+            texte.dessiner_texte(
+                ecran,
+                "La distance est finie : le javelot atteint la cible.",
+                x, y + 158, theme.police(18, "gras"), theme.OR_CLAIR)

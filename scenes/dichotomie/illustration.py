@@ -8,9 +8,10 @@ cible.
 
 La pointe du javelot EST sa position : elle converge vers le centre
 de la cible sans jamais l'atteindre mathématiquement. Quand le reste
-devient minuscule, une loupe ×10 centrée sur le centre de la cible
-apparaît : on voit la pointe s'approcher puis se fondre dans le
-point doré central.
+devient minuscule, une loupe centrée sur le centre exact de la cible
+(marqué d'une croix) apparaît ; dès que l'écart devient trop petit
+pour être vu, son grossissement double — le zoom « poursuit » la
+limite, et l'avancée de la pointe reste visible indéfiniment.
 
 On ne borne pas le nombre d'étapes : mathématiquement (1/2)^k ne
 s'annule jamais, et l'affichage reste honnête quel que soit k —
@@ -38,12 +39,13 @@ LARGEUR_PISTE = X_CIBLE - X_DEPART
 SEUIL_PIXEL = 15       # au-delà : plus rien ne bouge à l'écran, message
 
 # --- Loupe ---
-ECHELLE = 10               # grossissement de la loupe
+ECHELLE_BASE = 10          # grossissement de départ de la loupe
 LARGEUR_LOUPE = 320        # taille du panneau à l'écran
 HAUTEUR_LOUPE = 160
 LOUPE_X = 900              # coin haut-gauche du panneau
 LOUPE_Y = 185
 SEUIL_LOUPE = 80           # la loupe apparaît quand il reste < 80 pixels
+SEUIL_GAP_LOUPE = 4        # écart minimal visible : en dessous, le zoom double
 
 # --- Rythme du mode automatique ---
 DELAI_AUTO = 0.5           # une étape toutes les 0,5 seconde
@@ -180,6 +182,12 @@ class EtapeIllustration(SceneParadoxe):
         pygame.draw.circle(ecran, theme.SURFACE, (X_CIBLE, Y_PISTE), 17)
         pygame.draw.circle(ecran, theme.OR, (X_CIBLE, Y_PISTE), 8)
 
+        # Le centre exact de la cible : une petite croix crème
+        pygame.draw.line(ecran, theme.CREME,
+                         (X_CIBLE, Y_PISTE - 14), (X_CIBLE, Y_PISTE + 14), 2)
+        pygame.draw.line(ecran, theme.CREME,
+                         (X_CIBLE - 14, Y_PISTE), (X_CIBLE + 14, Y_PISTE), 2)
+
         # Le javelot, ancré par sa pointe : fût crème cerclé de sombre
         # pour rester lisible devant la cible, pointe dorée à l'avant.
         fut = pygame.Rect(x - 64, Y_PISTE - 2, 48, 4)
@@ -197,12 +205,15 @@ class EtapeIllustration(SceneParadoxe):
                              (x - 16, Y_PISTE + 6)])
 
     def _dessiner_loupe(self, ecran):
-        """Loupe ×10 centrée sur le centre de la cible.
+        """Loupe centrée sur le centre exact de la cible, zoom adaptatif.
 
-        Le centre de la cible est au MILIEU du panneau : on voit la
-        pointe du javelot converger vers le point doré central et,
-        à la saturation, se fondre dedans — le javelot « atteint »
-        visuellement le cœur de la cible.
+        Dès que l'écart restant devient trop petit pour être vu, le
+        grossissement double : le zoom « poursuit » la limite, et
+        l'avancée de la pointe reste visible indéfiniment. Deux
+        ambiances : vue extérieure (fond nuit, cible en arcs) tant
+        que la pointe est hors du point doré ; vue intérieure (fond
+        or) quand elle est dedans — le chemin restant et le centre
+        exact y sont dessinés en sombre pour rester lisibles.
         """
         reste_pixels = LARGEUR_PISTE * 0.5 ** self.k
         if reste_pixels >= SEUIL_LOUPE:
@@ -212,40 +223,89 @@ class EtapeIllustration(SceneParadoxe):
         cx = LARGEUR_LOUPE // 2    # le centre de la cible,
         cy = HAUTEUR_LOUPE // 2    # au milieu du panneau
 
+        # Zoom adaptatif : tant que l'écart est trop petit pour être
+        # vu, on double le grossissement. L'écart dans la loupe reste
+        # ainsi toujours entre SEUIL_GAP_LOUPE et 2 × SEUIL_GAP_LOUPE.
+        echelle = ECHELLE_BASE
+        n_zooms = 0
+        while reste_pixels * echelle < SEUIL_GAP_LOUPE:
+            echelle *= 2
+            n_zooms += 1
+
+        # La pointe est-elle à l'intérieur du point doré central ?
+        # (moins de 8 pixels réels du centre)
+        dans_le_point = reste_pixels < 8
+
         surface = self.loupe
-        surface.fill(theme.FOND)
+        surface.fill(theme.OR if dans_le_point else theme.FOND)
 
         def vers_loupe(x_reel):
-            """Conversion réel → loupe : une simple multiplication."""
-            return cx + (x_reel - X_CIBLE) * ECHELLE
+            """Conversion réel → loupe.
 
-        # La même scène que _dessiner_piste, à l'échelle 10, épurée :
-        # la ligne de vol, le chemin restant, le bord de la cible (en
-        # arc), puis le centre doré — dessiné AVANT le javelot : la
-        # pointe cerclée de sombre reste visible une fois posée sur
-        # le centre, comme en taille réelle.
-        pygame.draw.line(surface, theme.ENCRE_DOUCE,
+            Les coordonnées sont bornées : à très fort grossissement,
+            les objets hors champ auraient des coordonnées énormes qui
+            feraient déborder les entiers de pygame.
+            """
+            valeur = cx + (x_reel - X_CIBLE) * echelle
+            return max(-5000, min(LARGEUR_LOUPE + 5000, valeur))
+
+        def bornes_y(valeur):
+            return max(-5000, min(HAUTEUR_LOUPE + 5000, valeur))
+
+        # La ligne de vol, puis la marque du centre exact (une croix)
+        couleur_trait = theme.SURFACE if dans_le_point else theme.ENCRE_DOUCE
+        pygame.draw.line(surface, couleur_trait,
                          (0, cy), (LARGEUR_LOUPE, cy), 2)
-        pygame.draw.line(surface, theme.OR,
-                         (vers_loupe(x), cy), (cx, cy), 5)
-        pygame.draw.circle(surface, theme.SURFACE, (cx, cy), 38 * ECHELLE)
-        pygame.draw.circle(surface, theme.OR, (cx, cy), 8 * ECHELLE)
 
-        fut = pygame.Rect(vers_loupe(x - 64), cy - 2 * ECHELLE,
-                          48 * ECHELLE, 4 * ECHELLE)
-        pygame.draw.rect(surface, theme.CREME, fut)
-        pygame.draw.rect(surface, theme.SURFACE, fut, width=2)
-        # Pointe cerclée de sombre, comme en taille réelle
+        # Vue extérieure : le bord de la cible en arc, puis le point
+        # doré. Au-delà d'une certaine taille, les cercles rempliraient
+        # tout le panneau (et feraient déborder les entiers) : on ne
+        # les dessine plus.
+        if not dans_le_point and 38 * echelle <= 4 * LARGEUR_LOUPE:
+            pygame.draw.circle(surface, theme.SURFACE, (cx, cy),
+                               38 * echelle)
+        if not dans_le_point and 8 * echelle <= 4 * LARGEUR_LOUPE:
+            pygame.draw.circle(surface, theme.OR, (cx, cy), 8 * echelle)
+        pygame.draw.line(surface, couleur_trait,
+                         (cx, 0), (cx, HAUTEUR_LOUPE), 2)
+
+        # Le chemin restant, de la pointe au centre exact
+        couleur_gap = theme.SURFACE if dans_le_point else theme.OR
+        pygame.draw.line(surface, couleur_gap,
+                         (int(vers_loupe(x)), cy), (cx, cy), 5)
+
+        # Le javelot : fût et pointe cerclés de sombre ; la pointe
+        # devient crème quand elle est posée sur l'or, pour rester
+        # visible.
+        gauche_fut = int(vers_loupe(x - 64))
+        droite_fut = int(vers_loupe(x - 16))
+        haut_fut = int(bornes_y(cy - 2 * echelle))
+        bas_fut = int(bornes_y(cy + 2 * echelle))
+        fut = pygame.Rect(gauche_fut, haut_fut,
+                          droite_fut - gauche_fut, bas_fut - haut_fut)
+        if fut.width > 0 and fut.height > 0:
+            pygame.draw.rect(surface, theme.CREME, fut)
+            pygame.draw.rect(surface, theme.SURFACE, fut, width=2)
+        couleur_pointe = theme.CREME if dans_le_point else theme.OR
         pygame.draw.polygon(surface, theme.SURFACE,
-                            [(vers_loupe(x - 16), cy - 6 * ECHELLE - 2),
-                             (vers_loupe(x) + 2, cy),
-                             (vers_loupe(x - 16), cy + 6 * ECHELLE + 2)])
-        pygame.draw.polygon(surface, theme.OR,
-                            [(vers_loupe(x - 16), cy - 6 * ECHELLE),
-                             (vers_loupe(x), cy),
-                             (vers_loupe(x - 16), cy + 6 * ECHELLE)])
+                            [(int(vers_loupe(x - 16)),
+                              int(bornes_y(cy - 6 * echelle - 2))),
+                             (int(vers_loupe(x)) + 2, cy),
+                             (int(vers_loupe(x - 16)),
+                              int(bornes_y(cy + 6 * echelle + 2)))])
+        pygame.draw.polygon(surface, couleur_pointe,
+                            [(int(vers_loupe(x - 16)),
+                              int(bornes_y(cy - 6 * echelle))),
+                             (int(vers_loupe(x)), cy),
+                             (int(vers_loupe(x - 16)),
+                              int(bornes_y(cy + 6 * echelle)))])
 
-        texte.dessiner_texte(surface, "× 10", 10, 8,
+        # L'échelle affichée raconte le zoom qui poursuit la limite
+        if n_zooms == 0:
+            legende = f"× {ECHELLE_BASE}"
+        else:
+            legende = f"× {ECHELLE_BASE} · 2{en_exposant(n_zooms)}"
+        texte.dessiner_texte(surface, legende, 10, 8,
                              theme.police(16, "gras"), theme.OR_CLAIR)
 
         # Affichage du panneau, cerclé d'or
