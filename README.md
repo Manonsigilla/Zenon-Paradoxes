@@ -14,6 +14,7 @@ python main.py
 
 - **F11** : basculer en plein écran
 - **← / →** : étape précédente / suivante
+- **Espace** : avancer d'une étape (rester appuyé pour défiler)
 - **Échap** : retour à l'accueil
 - **Quitter** : fermer la fenêtre
 
