@@ -20,7 +20,7 @@ PARADOXES = [
      "squelette-0"),
     ("Β", "La dichotomie",
      "Peut-on parcourir une distance finie ?",
-     "squelette-0"),
+     "dichotomie-0"),
     ("Γ", "Achille et la tortue",
      "Le plus rapide peut-il rattraper le plus lent ?",
      "squelette-0"),

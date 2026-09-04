@@ -20,6 +20,7 @@ RACINE = os.path.dirname(os.path.abspath(__file__))
 DOSSIER_ASSETS = os.path.join(RACINE, "assets")
 DOSSIER_FONTS = os.path.join(DOSSIER_ASSETS, "fonts")
 DOSSIER_IMAGES = os.path.join(DOSSIER_ASSETS, "images")
+DOSSIER_SONS = os.path.join(DOSSIER_ASSETS, "sons")
 
 # --- Mise en page ---
 MARGE = 60          # marge latérale commune à toutes les scènes
