@@ -20,8 +20,6 @@ n'affiche jamais un « 1 » arrondi. À l'écran la pointe finit par
 se figer dans la cible, mais les chiffres, eux, continuent.
 """
 
-from decimal import Decimal, getcontext
-
 import pygame
 
 import config
@@ -29,12 +27,7 @@ import sons
 from scene import SceneParadoxe
 from ui import bouton, texte, theme
 
-# 20 chiffres significatifs suffisent largement : les décimales
-# exactes n'excèdent jamais 12 chiffres ici (k ≤ SEUIL_DECIMALES) et
-# la notation scientifique n'en montre que 4. La précision reste donc
-# minuscule quel que soit k : calcul instantané, aucun risque de
-# lenteur ni de crash, même pour des k énormes.
-getcontext().prec = 20
+from .maths import en_exposant, texte_valeur_parcourue, texte_valeur_reste
 
 # --- Géométrie de la piste (tout est dérivé de ces constantes) ---
 X_DEPART = 150
@@ -42,8 +35,6 @@ X_CIBLE = 1130
 Y_PISTE = 380
 LARGEUR_PISTE = X_CIBLE - X_DEPART
 
-# --- Affichage des valeurs ---
-SEUIL_DECIMALES = 12   # au-delà : notation scientifique (ligne trop longue)
 SEUIL_PIXEL = 15       # au-delà : plus rien ne bouge à l'écran, message
 
 # --- Loupe ---
@@ -56,24 +47,6 @@ SEUIL_LOUPE = 80           # la loupe apparaît quand il reste < 80 pixels
 
 # --- Rythme du mode automatique ---
 DELAI_AUTO = 0.5           # une étape toutes les 0,5 seconde
-
-# Chiffres en exposant pour écrire joliment 1/2⁴, 1/2¹⁰…
-_EXPOSANTS = {str(i): c for i, c in enumerate("⁰¹²³⁴⁵⁶⁷⁸⁹")}
-
-
-def en_exposant(k):
-    """Convertit 4 en "⁴", 12 en "¹²" (exposants Unicode)."""
-    return "".join(_EXPOSANTS[d] for d in str(k))
-
-
-def format_scientifique(nombre):
-    """Met un nombre au format « 4,77 × 10⁻⁷ » (notation française)."""
-    mantisse, exposant = f"{nombre:.4e}".split("e")
-    mantisse = mantisse.replace(".", ",")
-    exposant = int(exposant)
-    signe = "⁻" if exposant < 0 else ""
-    return f"{mantisse} × 10{signe}{en_exposant(abs(exposant))}"
-
 
 class EtapeIllustration(SceneParadoxe):
     TITRE = "Illustration"
@@ -116,9 +89,9 @@ class EtapeIllustration(SceneParadoxe):
         """Une étape de plus : le javelot couvre la moitié du reste.
 
         Aucune limite : mathématiquement (1/2)^k ne s'annule jamais,
-        on peut continuer indéfiniment. Au-delà de SEUIL_DECIMALES,
-        l'affichage passe en notation scientifique pour rester
-        honnête (« 1 − 4,77 × 10⁻⁷ »), jamais un « 1 » arrondi.
+        on peut continuer indéfiniment. Au-delà de k = 12, l'affichage
+        passe en notation scientifique pour rester honnête
+        (« 1 − 4,77 × 10⁻⁷ »), jamais un « 1 » arrondi.
         """
         self.k += 1
         sons.jouer("etape")
@@ -153,14 +126,6 @@ class EtapeIllustration(SceneParadoxe):
     def x_du_javelot(self):
         """Position de la POINTE en pixels : conversion fraction → écran."""
         return X_DEPART + self.fraction_parcourue() * LARGEUR_PISTE
-
-    def _reste_exact(self):
-        """1/2^k en calcul exact (module decimal) : jamais arrondi.
-
-        L'affichage utilise cette valeur : aucun arrondi à « 0 » ni
-        à « 1 », quelle que soit la taille de k.
-        """
-        return Decimal(1) / (Decimal(2) ** self.k)
 
     # ------------------------------------------------------------------
     # Contrat de scène
@@ -293,18 +258,11 @@ class EtapeIllustration(SceneParadoxe):
         texte.dessiner_texte(ecran, f"Étape {self.k}",
                              x, y, theme.police(32, "titre"), theme.ENCRE,
                              contour=theme.OR, epaisseur=1)
-        # Les valeurs exactes, sans arrondi : jusqu'à k = 12, écriture
-        # décimale exacte (1/2^k possède exactement k décimales) ;
-        # au-delà, notation scientifique — jamais un « 1 » ni un « 0 »
-        # arrondis, aussi loin qu'on aille.
-        reste = self._reste_exact()
-        if self.k <= SEUIL_DECIMALES:
-            texte_parcouru = str(Decimal(1) - reste).replace(".", ",")
-            texte_reste = str(reste).replace(".", ",")
-        else:
-            valeur = format_scientifique(reste)
-            texte_parcouru = f"1 − {valeur}"
-            texte_reste = f"≈ {valeur}"
+        # Les valeurs exactes, sans arrondi : décimales exactes
+        # jusqu'à k = 12, puis notation scientifique — jamais un « 1 »
+        # ni un « 0 » arrondis, aussi loin qu'on aille (voir maths.py).
+        texte_parcouru = texte_valeur_parcourue(self.k)
+        texte_reste = texte_valeur_reste(self.k)
         texte.dessiner_texte(
             ecran, f"Parcouru : 1 − 1/2{en_exposant(self.k)} = {texte_parcouru}",
             x, y + 48, theme.police(22), theme.ENCRE)
