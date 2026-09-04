@@ -7,8 +7,9 @@ F11 : basculer en plein écran.
 import pygame
 
 import config
+import sons
 from scene_manager import SceneManager
-from scenes import accueil, squelette
+from scenes import accueil, dichotomie, squelette
 
 
 def basculer_plein_ecran(manager):
@@ -20,6 +21,7 @@ def basculer_plein_ecran(manager):
 
 def main():
     pygame.init()
+    sons.initialiser()   # sans carte son, l'application fonctionne quand même
     ecran = pygame.display.set_mode(config.TAILLE_ECRAN)
     pygame.display.set_caption(config.TITRE)
     horloge = pygame.time.Clock()
@@ -27,6 +29,7 @@ def main():
     # --- Enregistrement des scènes ---
     manager = SceneManager(ecran)
     manager.enregistrer("accueil", accueil.SceneAccueil(manager))
+    manager.ajouter_parcours("dichotomie", dichotomie)
     manager.ajouter_parcours("squelette", squelette)
     # Dès qu'un paradoxe est prêt, par exemple :
     #     from scenes import fleche

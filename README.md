@@ -29,6 +29,7 @@ python main.py
 - `ui/` — boutons, texte, palette (« temple grec »), motifs (colonnade), barre de navigation
 - `assets/fonts/` — polices DejaVu Sans (voir LICENSE)
 - `assets/images/` — images du style « mixte » (PNG à fond transparent)
+- `assets/sons/` — sons (.wav ou .ogg — pygame 2 ne lit pas les .mp3) : déposer `etape.ogg`, `limite.ogg`, `rejouer.ogg` ; la déclaration est dans `sons.py`
 
 ## Répartition
 

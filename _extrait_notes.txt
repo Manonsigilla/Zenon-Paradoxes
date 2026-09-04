@@ -1,0 +1,296 @@
+===== PAGE 1 =====
+Kick off 1 : Zénon
+faire recherche sur paradoxes Zénon + parémide
+ex : Achille et la tortue, dichotomie, flèches en vol
+obj du projet : tester ce qu'il dit et le contre dire
+Le vrai paradoxe de Zénon serait : pourquoi on lui accorde encore autant d'importance aujourd'hui 
+alors que ce qu'il dit est absurde avec toutes les connaissances que nous avons. 
+Achilles et la tortue :
+"doit sans cesse avoir une certaine avance" : quand on prends au mot ce que dit Zénon, il DOIT donc 
+si la tortue n'a pas d'avance, Achille la rattrape
+Données :
+Va = 10 m/s^-1 (100 mètres en 10 secondes comme les athlètes actuels)
+Vt = 1 m/s^-1
+formule : distance = vitesse x temps
+Distance parcourue (en mètres) par Achille après t secondes :
+d Achille = 10 x t
+Distance parcourue (en mètres) par la tortue après t secondes :
+d tortue = 1 x t + 100
+Graphiquement, Achille rattrape la tortue après environ 11 secondes (à environ 110 mètres de son 
+point de départ)
+Résolution :
+d Achille = d tortue
+dₐ = dₜ
+<-> 10t = t + 100
+<-> 9t = 100
+<-> t = 100/9 ≈ 11.1
+CQFD
+PARADOXE
+Données :
+vₐ = 10 m/s⁻¹
+mardi 1 septembre 2026 11:54
+   Nouvelle section 1 Page 1    
+===== PAGE 2 =====
+vₐ = 10 m/s⁻¹
+vₜ = 1 m/s⁻¹
+étape 0 : 
+Achille = 0m parcouru
+Tortue = 100m d'avance parcourus
+étape 1 (10s) :
+Achille = 100m
+Tortue = 110m
+étape 2 (11s) :
+Achille = 110m
+Tortue = 111m
+étape 3 (11.1s) :
+Achille = 111m
+Tortue = 111,1m
+Résolution du paradoxe :
+On définit 2 suites :
+Pour tout entier n ≥ 1, on définit pas dₙ la distance (en m) parcourue par Achille à l'étape n, 
+ainsi :
+d1 = 100;
+d2 = 10;
+d3 = 1;
+d4 = 0.1;
+etc.
+Pour tout entier n ≥ 1, on définit par tₙ le temps (en s) mis par Achille pour couvrir la distance 
+dₙ, ainsi :
+t1 = 10;
+t2 = 1;
+t3 = 0.1;
+t4 = 0.01;
+etc.
+Les 2 suites dₙ et tₙ sont géométriques de raison 
+ 
+    
+Pour connaître le temps mis par Achille pour rattraper la tortue, il faut donc sommer le temps qu'on 
+nomme S.
+S = 10 + 1 + 0.1 + 0.01 + …
+Or Sₙ = t₁ + t₂ + … + tₙ = t₁ * 
+    
+     
+ 
+   
+    
+            
+    
+     
+ 
+ 
+    
+        
+   
+           
+ 
+     
+ 
+ 
+Et S =    
+    
+      
+    
+   
+    
+ 
+  
+ 
+ 
+   
+                                   
+    
+ 
+ 
+  
+ 
+ 
+   Nouvelle section 1 Page 2    
+===== PAGE 3 =====
+Et S =    
+    
+      
+    
+   
+         
+ 
+     
+ 
+  
+   
+                                       
+    
+  
+ 
+     
+ 
+ 
+  
+Dichotomie :
+"Le javelot n'atteint jamais la cible car il reste toujours une semi-distance à parcourir."
+"La pierre ne peut jamais atteindre l'arbre car il reste toujours une infinité d'étapes à parcourir."
+"La flèche n'atteindra jamais le mur"
+Formule officielle :
+S = 
+ 
+   
+ 
+   
+ 
+        
+ 
+   
+ 
+ 
+ 
+   
+ 
+   
+  
+     
+  
+   
+La somme des inverses des puissances de 2 en commençant par 
+ 
+   vaut 1.
+Donc la cible est bien atteinte officiellement puisque c'est égale à 1.
+Le Paradoxe explique qu'il doit parcourir la moitié du trajet, puis la moitié de la moitié du trajet, etc. 
+Donc la pierre/javelot n'atteindrait jamais la cible.
+Erreur : Une somme infinie de nombres positifs n'est pas forcément infinie.
+Formule paradoxe :
+L 
+ 
+   
+ 
+   
+ 
+   
+ 
+          
+ 
+     
+     
+     
+          
+    
+ 
+   
+    
+ 
+   
+    
+ 
+   
+    
+ 
+  
+ 
+     
+        
+     
+                                                                  
+                     
+   
+= 1er terme * 1 - raison^nombre de termes / 1 - raison
+= 
+ 
+     
+    
+   
+ 
+   
+  
+     
+= 
+ 
+     
+    
+   
+ 
+ 
+  
+     
+=    
+ 
+   
+ 
+                 ¹
+= 1 → L 
+ 
+   
+ 
+   
+ 
+   
+ 
+         
+CQFD
+Paradoxe de la flèche en vol :
+"La flèche ne quitte jamais l'arc à flèches"
+"A un instant précis, la flèche occupe l'espace correspondant à sa propre longueur. Pendant cet 
+instant, qui est indivisible et n'a aucune durée, elle ne peut pas changer de position. Donc, à cet 
+instant, elle est immobile. Mais ce raisonnement vaut pour tout instant. Le temps étant supposé 
+constitué uniquement d'instants, la flèche est donc immobile pendant tout son vol."
+   Nouvelle section 1 Page 3    
+===== PAGE 4 =====
+Démonstration du paradoxe :
+Ɐt, x(t) = constante pendant l'instant t
+Ɐt, v(t) = 0
+Et donc mouvement impossible.
+CQFD
+La conclusion repose cependant sur une confusion : être à une position précise à un instant donné 
+ne signifie pas être au repos. Une flèche peut être en position x(t) à l'instant t, tout en ayant une 
+vitesse non nulle à cet instant.
+Démonstration moderne :
+Position de la flèche par une fonction du temps : 
+x(t)
+Si la flèche se déplace à vitesse constante v : 
+x(t) = x₀ + vt
+x₀ = position initiale;
+v = vitesse;
+t = temps écoulé;
+Si v ≠ 0, position change avec le temps :
+x(t + ∆t) - x(t) = v∆t
+Pour tout intervalle de temps non nul ∆t > 0, le déplacement est donc non nul :
+v∆t ≠ 0
+La flèche est ainsi en mouvement, même si, à chaque instant particulier, elle occupe une position 
+bien précise.
+Démontrons,
+x(t) = 10t
+v = 10 m/s
+x(2) = 20m
+x(2,1) = 21m
+x(2,1) - x(2) = 21 - 20 = 1 m
+Le fait qu'elle soit à 20 mètres exactement à l'instant t = 2 ne veut pas dire qu'elle est immobile. Cela 
+indique seulement sa position à cet instant.
+Démontrons qu'elle se déplace, vitesse instantanée :
+v(t) =    
+    
+            
+            
+Cette formule ne consiste pas à diviser un déplacement par un "temps nul". Elle prend la limite du 
+quotient lorsque l'intervalle de temps devient de plus en plus petit.
+   Nouvelle section 1 Page 4    
+===== PAGE 5 =====
+x(t) = x₀ + vt
+            
+                                    
+                         
+= 
+   
+       
+= 
+  
+      
+Même lorsque ∆t → 0, le quotient peut tendre vers une valeur non nulle.
+Admettons v = 10 m/s
+   
+    
+            
+                      
+    
+    
+          
+La vitesse instantanée vaut donc 10 m/s et non 0
+Être en une position précise à un instant ne signifie pas être immobile. Et 
+mathématiquement, x(t) peut être parfaitement défini alors que x'(t) ≠ 0.
+   Nouvelle section 1 Page 5    
