@@ -31,7 +31,6 @@ python main.py
 - `scenes/dichotomie/` — **terminée** (Manon) : 5 étapes (`presentation`, `illustration`, `demo_zenon`, `demo_moderne`, `conclusion`) + `maths.py` (calculs décimaux exacts)
 - `scenes/fleche/` — **terminé** (Angie) : 5 étapes, même structure que la dichotomie
 - `scenes/achille/` — **intégré** (Rayene) : 2 phases dans `achille.py` — le raisonnement de Zénon, puis la course réelle en temps continu (l'écart D₀·rᵏ ne s'annule jamais dans la 1ʳᵉ ; Achille rattrape dans la 2ᵉ)
-- `scenes/squelette/` — modèle d'origine ; encore chargé dans `main.py` mais plus relié à l'accueil
 - `ui/` — boutons, texte, palette (« temple grec »), motifs (colonnade), barre de navigation
 - `assets/fonts/` — polices DejaVu Sans et Cardo (voir les licences)
 - `assets/images/` — images du style « mixte » (PNG à fond transparent)
@@ -43,7 +42,7 @@ python main.py
 |---|---|---|
 | La flèche en vol | Angie | **terminé** (5 étapes) |
 | La dichotomie | Manon | **terminée** (5 étapes) |
-| Achille et la tortue | Rayene | **intégré** (2 phases) |
+| Achille et la tortue | Rayene | **terminée** (2 étapes) |
 | Socle commun + accueil | ensemble | terminé |
 
 ## Créer un paradoxe
@@ -55,17 +54,5 @@ montrent deux options possibles :
 - **5 étapes** (dichotomie, flèche) : `presentation.py`,
   `illustration.py`, `demo_zenon.py`, `demo_moderne.py`,
   `conclusion.py` ;
-- **2 phases** (Achille) : tout le déroulé dans `achille.py`, le
+- **2 étapes** (Achille) : tout le déroulé dans `achille.py`, le
   raisonnement puis la résolution.
-
-Pour un nouveau paradoxe :
-
-1. S'inspirer de `scenes/dichotomie/` (exemple complet) ou de
-   `scenes/achille/` (variante en phases)
-2. Déclarer l'ordre du parcours dans `__init__.py` (`NOM` et `etapes`)
-3. Enregistrer le paradoxe dans `main.py` :
-   `manager.ajouter_parcours("nom", module)`
-4. Pointer le bouton de l'accueil vers `"nom-0"`
-
-Chaque étape d'un paradoxe respecte le contrat de `Scene` :
-`on_entrer`, `gerer_evenement`, `mettre_a_jour`, `dessiner`.
