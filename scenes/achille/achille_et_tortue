@@ -1,0 +1,652 @@
+"""Le paradoxe d'Achille et la tortue, en deux phases.
+
+PHASE 1 — « Paradoxe » : on rejoue fidèlement le raisonnement de
+Zénon. À l'étape k, Achille a comblé une fraction du chemin et la
+tortue a, entre-temps, avancé un peu plus loin. La distance qui les
+sépare vaut D0 × r^k (D0 = l'avance initiale, r = vitesse_tortue /
+vitesse_achille, toujours < 1). Comme pour le javelot de la
+dichotomie, cette distance est calculée par une formule qui ne peut
+STRUCTURELLEMENT jamais tomber à zéro pour un k fini : dans cette
+phase, Achille n'atteint donc jamais visiblement la tortue — une
+loupe apparaît même pour continuer à montrer l'écart quand il devient
+trop petit pour l'œil nu, exactement comme la loupe de la
+dichotomie sur sa cible.
+
+PHASE 2 — « Résolution » : on quitte le raisonnement de Zénon pour
+la physique réelle. Les deux coureurs avancent en continu à leur
+vraie vitesse ; comme Achille est plus rapide, il rattrape belle et
+bien la tortue, à un instant fini (t = D0 / (v_achille − v_tortue)).
+C'est la réponse mathématique au paradoxe : une infinité d'étapes de
+plus en plus petites peut très bien se dérouler dans un temps fini.
+
+On passe de l'une à l'autre avec le bouton « Voir la résolution ».
+"""
+
+import sys
+from decimal import Decimal, getcontext
+
+import pygame
+
+# 50 chiffres significatifs : largement de quoi représenter D0 × r^k
+# exactement (r = 3/8 est une fraction décimale exacte) jusqu'à des
+# valeurs de k bien au-delà de ce qu'un utilisateur cliquera jamais.
+getcontext().prec = 50
+
+
+# ======================================================================
+# CONSTANTES
+# ======================================================================
+
+# --- Fenêtre ---
+LARGEUR_FENETRE = 1280
+HAUTEUR_FENETRE = 720
+FPS = 60
+
+# --- Couleurs (même esprit « antique » que le reste du projet) ---
+COULEUR_FOND = (18, 22, 34)
+COULEUR_PANNEAU = (30, 38, 58)
+COULEUR_OR = (198, 156, 71)
+COULEUR_OR_CLAIR = (230, 196, 120)
+COULEUR_CREME = (238, 230, 210)
+COULEUR_ENCRE = (25, 22, 18)
+COULEUR_ENCRE_DOUCE = (150, 150, 160)
+COULEUR_ACHILLE = (198, 156, 71)      # doré : le héros
+COULEUR_TORTUE = (94, 140, 92)        # vert sourd : la tortue
+COULEUR_INACTIF = (70, 76, 92)
+
+# --- Géométrie de la piste ---
+X_DEPART = 150
+X_FIN_PISTE = 1130          # position à l'écran de la cible mathématique
+Y_PISTE = 330
+LARGEUR_PISTE_PIXELS = X_FIN_PISTE - X_DEPART
+
+# --- Données du paradoxe (unités abstraites, disons des mètres) ---
+VITESSE_ACHILLE = 8.0     # m/s
+VITESSE_TORTUE = 3.0      # m/s : plus lente, mais elle a une avance
+AVANCE_INITIALE = 50.0    # m
+
+# --- Rythme de l'avancée automatique des étapes (phase Paradoxe) ---
+DELAI_AUTO_ETAPE = 0.6     # secondes entre deux étapes en mode auto
+K_MAXIMUM = 300             # sécurité : au-delà, l'écart est de toute
+                            # façon bien en dessous de la précision d'un
+                            # écran ; inutile de continuer à calculer
+
+# --- Loupe (phase Paradoxe) : montre que l'écart ne s'annule jamais ---
+SEUIL_LOUPE = 70            # px : en dessous, la loupe apparaît
+SEUIL_GAP_LOUPE = 4         # écart minimal que la loupe doit montrer
+ECHELLE_LOUPE_BASE = 10
+LARGEUR_LOUPE = 320
+HAUTEUR_LOUPE = 170
+LOUPE_X = 880
+LOUPE_Y = 140
+MAX_ZOOMS = 60
+
+
+# ======================================================================
+# MATHÉMATIQUES DU PARADOXE
+# ======================================================================
+
+def raison():
+    """r = vitesse_tortue / vitesse_achille (toujours < 1 ici)."""
+    return Decimal(str(VITESSE_TORTUE)) / Decimal(str(VITESSE_ACHILLE))
+
+
+def cible():
+    """La limite mathématique : D0 / (1 − r).
+
+    C'est à la fois la « cible » vers laquelle les deux coureurs
+    convergent sans jamais l'atteindre dans le raisonnement de Zénon
+    (phase Paradoxe), et la distance à laquelle Achille rattrape
+    réellement la tortue (phase Résolution) — les deux notions
+    désignent le même nombre.
+    """
+    return Decimal(str(AVANCE_INITIALE)) / (1 - raison())
+
+
+def temps_rattrapage():
+    """Instant réel (en secondes) du rattrapage, calcul indépendant."""
+    return AVANCE_INITIALE / (VITESSE_ACHILLE - VITESSE_TORTUE)
+
+
+def gap_exact(k):
+    """Écart D0 × r^k après k étapes : structurellement jamais nul."""
+    return Decimal(str(AVANCE_INITIALE)) * raison() ** k
+
+
+def position_achille_exact(k):
+    """Distance parcourue par Achille après k étapes (somme géométrique)."""
+    if k == 0:
+        return Decimal(0)
+    r = raison()
+    return Decimal(str(AVANCE_INITIALE)) * (1 - r ** k) / (1 - r)
+
+
+def position_tortue_exact(k):
+    """La tortue est toujours exactement l'écart devant Achille."""
+    return position_achille_exact(k) + gap_exact(k)
+
+
+_EXPOSANTS = {str(i): c for i, c in enumerate("⁰¹²³⁴⁵⁶⁷⁸⁹")}
+
+
+def en_exposant(k):
+    """Écrit 4 en "⁴" (utilisé pour l'affichage de r^k et du zoom)."""
+    return "".join(_EXPOSANTS[d] for d in str(k))
+
+
+def format_scientifique(valeur):
+    """« 4,77 × 10⁻⁷ » en notation française, pour les écarts minuscules."""
+    mantisse, exposant = f"{float(valeur):.3e}".split("e")
+    mantisse = mantisse.replace(".", ",")
+    exposant = int(exposant)
+    signe = "⁻" if exposant < 0 else ""
+    return f"{mantisse} × 10{signe}{en_exposant(abs(exposant))}"
+
+
+def texte_valeur(valeur_decimale):
+    """Affiche un nombre sans jamais l'arrondir silencieusement à 0.
+
+    Au-dessus d'un dix-millième : décimales normales. En dessous
+    (l'écart devient minuscule mais n'est mathématiquement jamais
+    nul) : notation scientifique, pour ne jamais afficher un « 0 »
+    trompeur.
+    """
+    valeur = float(valeur_decimale)
+    if valeur == 0:
+        return "0"
+    if abs(valeur) >= 0.0001:
+        return f"{valeur:.4f}".replace(".", ",")
+    return format_scientifique(valeur_decimale)
+
+
+def x_ecran(position_reelle):
+    """Convertit une distance réelle (m) en abscisse écran.
+
+    La cible mathématique est toujours placée au même endroit
+    (X_FIN_PISTE), qu'on soit dans la phase Paradoxe ou Résolution :
+    les deux phases partagent donc exactement la même piste.
+    """
+    fraction = float(position_reelle) / float(cible())
+    return X_DEPART + fraction * LARGEUR_PISTE_PIXELS
+
+
+# ======================================================================
+# ÉTAT DE LA SIMULATION
+# ======================================================================
+
+class EtatSimulation:
+    """Regroupe toutes les variables qui évoluent pendant l'exécution."""
+
+    def __init__(self):
+        self.reinitialiser_complet()
+
+    def reinitialiser_complet(self):
+        self.mode = "paradoxe"          # ou "resolution"
+        self.k = 0
+        self.auto = False
+        self.temps_auto = 0.0
+        self._reinitialiser_resolution()
+
+    def _reinitialiser_resolution(self):
+        self.position_achille_reel = 0.0
+        self.position_tortue_reel = AVANCE_INITIALE
+        self.objectif_etape_reel = AVANCE_INITIALE
+        self.numero_etape_reel = 0
+        self.temps_ecoule_reel = 0.0
+        self.en_cours_reel = False
+        self.termine_reel = False
+        self.marques_etapes_reel = [AVANCE_INITIALE]
+
+    # ------------------------------------------------------------------
+    # Actions — phase Paradoxe
+    # ------------------------------------------------------------------
+    def avancer_etape(self):
+        if self.k < K_MAXIMUM:
+            self.k += 1
+
+    def basculer_auto(self):
+        self.auto = not self.auto
+        self.temps_auto = 0.0
+
+    def passer_a_resolution(self):
+        self.mode = "resolution"
+        self._reinitialiser_resolution()
+
+    # ------------------------------------------------------------------
+    # Actions — phase Résolution
+    # ------------------------------------------------------------------
+    def revenir_au_paradoxe(self):
+        self.mode = "paradoxe"
+
+    def basculer_course_reelle(self):
+        if not self.termine_reel:
+            self.en_cours_reel = not self.en_cours_reel
+
+    # ------------------------------------------------------------------
+    # Rejouer / recommencer (R) — ne concerne que la phase affichée
+    # ------------------------------------------------------------------
+    def rejouer(self):
+        if self.mode == "paradoxe":
+            self.k = 0
+            self.auto = False
+            self.temps_auto = 0.0
+        else:
+            self._reinitialiser_resolution()
+
+
+def mettre_a_jour(etat, dt):
+    if etat.mode == "paradoxe":
+        _mettre_a_jour_paradoxe(etat, dt)
+    else:
+        _mettre_a_jour_resolution(etat, dt)
+
+
+def _mettre_a_jour_paradoxe(etat, dt):
+    """Avance automatiquement d'une étape toutes les DELAI_AUTO_ETAPE s."""
+    if not etat.auto:
+        return
+    etat.temps_auto += dt
+    if etat.temps_auto >= DELAI_AUTO_ETAPE:
+        etat.temps_auto = 0.0
+        etat.avancer_etape()
+
+
+def _mettre_a_jour_resolution(etat, dt):
+    """Fait courir réellement les deux coureurs, à vitesse constante.
+
+    Contrairement à la phase Paradoxe (positions recalculées d'un
+    coup à chaque étape), ici le mouvement est continu : on avance
+    juste position += vitesse * dt, comme dans la réalité. Les
+    « étapes » de Zénon ne sont plus programmées : elles sont
+    simplement détectées, chaque fois qu'Achille atteint le point où
+    se trouvait la tortue au début de l'étape en cours.
+    """
+    if not etat.en_cours_reel or etat.termine_reel:
+        return
+
+    etat.temps_ecoule_reel += dt
+    etat.position_achille_reel += VITESSE_ACHILLE * dt
+    etat.position_tortue_reel += VITESSE_TORTUE * dt
+
+    compte = 0
+    while (not etat.termine_reel
+           and etat.position_achille_reel >= etat.objectif_etape_reel
+           and compte < 500):
+        ecart_px = ((etat.position_tortue_reel - etat.position_achille_reel)
+                    / float(cible()) * LARGEUR_PISTE_PIXELS)
+        if ecart_px <= 2:
+            # Écart devenu invisible à l'écran : on annonce directement
+            # le rattrapage plutôt que de compter des étapes de plus
+            # en plus petites indéfiniment.
+            etat.termine_reel = True
+            etat.en_cours_reel = False
+            etat.position_achille_reel = etat.position_tortue_reel
+            break
+        etat.numero_etape_reel += 1
+        etat.objectif_etape_reel = etat.position_tortue_reel
+        etat.marques_etapes_reel.append(etat.position_tortue_reel)
+        compte += 1
+
+    if not etat.termine_reel and etat.position_achille_reel >= etat.position_tortue_reel:
+        etat.position_achille_reel = etat.position_tortue_reel
+        etat.termine_reel = True
+        etat.en_cours_reel = False
+
+
+# ======================================================================
+# BOUTONS
+# ======================================================================
+
+class Bouton:
+    """Petit bouton cliquable, dans le même esprit que le reste du projet."""
+
+    def __init__(self, x, y, largeur, hauteur, texte, on_clic):
+        self.rect = pygame.Rect(x, y, largeur, hauteur)
+        self.texte = texte
+        self.on_clic = on_clic
+        self.actif = True
+
+    def gerer_evenement(self, event):
+        if not self.actif:
+            return False
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+            if self.rect.collidepoint(event.pos):
+                self.on_clic()
+                return True
+        return False
+
+    def dessiner(self, ecran):
+        couleur_bord = COULEUR_OR if self.actif else COULEUR_INACTIF
+        couleur_texte = COULEUR_CREME if self.actif else COULEUR_ENCRE_DOUCE
+        pygame.draw.rect(ecran, COULEUR_PANNEAU, self.rect, border_radius=8)
+        pygame.draw.rect(ecran, couleur_bord, self.rect, width=2,
+                          border_radius=8)
+        surface = police(17, gras=True).render(self.texte, True, couleur_texte)
+        ecran.blit(surface, surface.get_rect(center=self.rect.center))
+
+
+# ======================================================================
+# AFFICHAGE
+# ======================================================================
+
+def police(taille, gras=False, italique=False):
+    return pygame.font.SysFont("georgia,dejavuserif,serif", taille,
+                                bold=gras, italic=italique)
+
+
+def dessiner_texte(ecran, texte, x, y, fonte, couleur):
+    surface = fonte.render(texte, True, couleur)
+    ecran.blit(surface, (x, y))
+    return surface.get_height()
+
+
+def dessiner_entete(ecran, sous_titre):
+    dessiner_texte(ecran, "Achille et la tortue",
+                    X_DEPART, 30, police(32, gras=True), COULEUR_CREME)
+    dessiner_texte(ecran, sous_titre, X_DEPART, 68,
+                    police(18, italique=True), COULEUR_OR_CLAIR)
+    dessiner_texte(
+        ecran, "Espace : démarrer / pause   —   R : recommencer   —   Échap : quitter",
+        X_DEPART, 96, police(15), COULEUR_ENCRE_DOUCE)
+
+
+def _dessiner_marqueur_tortue(ecran, x, y):
+    carapace = pygame.Rect(0, 0, 40, 24)
+    carapace.midbottom = (x, y + 12)
+    pygame.draw.ellipse(ecran, COULEUR_TORTUE, carapace)
+    pygame.draw.ellipse(ecran, COULEUR_ENCRE, carapace, width=2)
+    tete = pygame.Rect(0, 0, 12, 10)
+    tete.midleft = (carapace.right - 4, carapace.centery)
+    pygame.draw.ellipse(ecran, COULEUR_TORTUE, tete)
+
+
+def _dessiner_marqueur_achille(ecran, x, y):
+    corps = pygame.Rect(0, 0, 14, 30)
+    corps.midbottom = (x, y + 2)
+    pygame.draw.ellipse(ecran, COULEUR_ACHILLE, corps)
+    pygame.draw.circle(ecran, COULEUR_ACHILLE, (x, corps.top - 7), 7)
+    pygame.draw.line(ecran, COULEUR_OR_CLAIR,
+                      (x - 4, corps.top), (x + 22, corps.top - 26), 3)
+
+
+# ----------------------------------------------------------------------
+# Phase 1 : Paradoxe
+# ----------------------------------------------------------------------
+
+def dessiner_phase_paradoxe(ecran, etat, boutons):
+    dessiner_entete(ecran, "Le raisonnement de Zénon : le paradoxe pur")
+
+    # Piste et cible mathématique (jamais atteinte dans cette phase)
+    pygame.draw.line(ecran, COULEUR_ENCRE_DOUCE,
+                      (X_DEPART, Y_PISTE), (X_FIN_PISTE, Y_PISTE), 2)
+    pygame.draw.line(ecran, COULEUR_ENCRE_DOUCE,
+                      (X_DEPART, Y_PISTE - 14), (X_DEPART, Y_PISTE + 14), 2)
+    pygame.draw.circle(ecran, COULEUR_PANNEAU, (X_FIN_PISTE, Y_PISTE), 22)
+    pygame.draw.circle(ecran, COULEUR_OR, (X_FIN_PISTE, Y_PISTE), 22, width=2)
+    pygame.draw.line(ecran, COULEUR_CREME,
+                      (X_FIN_PISTE, Y_PISTE - 10), (X_FIN_PISTE, Y_PISTE + 10), 2)
+    pygame.draw.line(ecran, COULEUR_CREME,
+                      (X_FIN_PISTE - 10, Y_PISTE), (X_FIN_PISTE + 10, Y_PISTE), 2)
+
+    for marque in range(1, etat.k):
+        x_m = x_ecran(position_tortue_exact(marque))
+        pygame.draw.line(ecran, COULEUR_ENCRE_DOUCE,
+                          (x_m, Y_PISTE - 6), (x_m, Y_PISTE + 6), 1)
+
+    x_achille = x_ecran(position_achille_exact(etat.k))
+    x_tortue = x_ecran(position_tortue_exact(etat.k))
+    _dessiner_marqueur_tortue(ecran, x_tortue, Y_PISTE)
+    _dessiner_marqueur_achille(ecran, x_achille, Y_PISTE)
+
+    reste_px_declencheur = X_FIN_PISTE - x_tortue
+    if reste_px_declencheur < SEUIL_LOUPE:
+        _dessiner_loupe_paradoxe(ecran, etat.k, x_achille, x_tortue)
+
+    _dessiner_panneau_paradoxe(ecran, etat)
+    for b in boutons:
+        b.dessiner(ecran)
+
+
+def _dessiner_loupe_paradoxe(ecran, k, x_achille, x_tortue):
+    """Loupe centrée sur la cible mathématique : montre que l'écart ne
+    s'annule jamais, en zoomant davantage à mesure qu'il rétrécit —
+    exactement le même principe que la loupe de la dichotomie.
+    """
+    surface = pygame.Surface((LARGEUR_LOUPE, HAUTEUR_LOUPE))
+    surface.fill((10, 12, 20))
+    cx, cy = LARGEUR_LOUPE // 2, HAUTEUR_LOUPE // 2
+
+    reste_tortue_px = X_FIN_PISTE - x_tortue
+    echelle = ECHELLE_LOUPE_BASE
+    n_zooms = 0
+    while reste_tortue_px * echelle < SEUIL_GAP_LOUPE and n_zooms < MAX_ZOOMS:
+        echelle *= 2
+        n_zooms += 1
+
+    def vers_loupe(x_reel):
+        valeur = cx + (x_reel - X_FIN_PISTE) * echelle
+        return max(-5000, min(LARGEUR_LOUPE + 5000, valeur))
+
+    pygame.draw.line(surface, COULEUR_ENCRE_DOUCE,
+                      (0, cy), (LARGEUR_LOUPE, cy), 1)
+    pygame.draw.line(surface, COULEUR_CREME, (cx, 0), (cx, HAUTEUR_LOUPE), 1)
+
+    x_t = int(vers_loupe(x_tortue))
+    x_a = int(vers_loupe(x_achille))
+    _dessiner_marqueur_tortue(surface, x_t, cy)
+    _dessiner_marqueur_achille(surface, x_a, cy)
+
+    legende = (f"× {ECHELLE_LOUPE_BASE}" if n_zooms == 0
+               else f"× {ECHELLE_LOUPE_BASE} · 2{en_exposant(n_zooms)}")
+    dessiner_texte(surface, legende, 10, 8,
+                    police(15, gras=True), COULEUR_OR_CLAIR)
+    dessiner_texte(surface, "la tortue reste toujours devant", 10,
+                    HAUTEUR_LOUPE - 26, police(13, italique=True),
+                    COULEUR_ENCRE_DOUCE)
+
+    ecran.blit(surface, (LOUPE_X, LOUPE_Y))
+    pygame.draw.rect(ecran, COULEUR_OR,
+                      (LOUPE_X, LOUPE_Y, LARGEUR_LOUPE, HAUTEUR_LOUPE),
+                      width=2, border_radius=8)
+
+
+def _dessiner_panneau_paradoxe(ecran, etat):
+    panneau = pygame.Rect(X_DEPART - 20, 420, LARGEUR_PISTE_PIXELS + 40, 210)
+    pygame.draw.rect(ecran, COULEUR_PANNEAU, panneau, border_radius=14)
+    pygame.draw.rect(ecran, COULEUR_OR, panneau, width=2, border_radius=14)
+
+    x, y = panneau.left + 24, panneau.top + 16
+    r = raison()
+
+    dessiner_texte(ecran, f"Étape {etat.k}", x, y,
+                    police(26, gras=True), COULEUR_OR_CLAIR)
+    y += 38
+    dessiner_texte(
+        ecran,
+        f"Position d'Achille : {texte_valeur(position_achille_exact(etat.k))} m",
+        x, y, police(19), COULEUR_CREME)
+    y += 26
+    dessiner_texte(
+        ecran,
+        f"Position de la tortue : {texte_valeur(position_tortue_exact(etat.k))} m",
+        x, y, police(19), COULEUR_CREME)
+    y += 26
+    dessiner_texte(
+        ecran,
+        f"Écart = D0 × r{en_exposant(etat.k)} = {texte_valeur(gap_exact(etat.k))} m",
+        x, y, police(19), COULEUR_CREME)
+    y += 32
+
+    if etat.k == 0:
+        explication = ("Espace : lancer le défilement automatique des "
+                        "étapes du raisonnement de Zénon.")
+    else:
+        explication = (
+            "Achille atteint le point où était la tortue ; entre-temps "
+            "elle a avancé un peu plus loin — un nouvel écart, plus "
+            "petit d'un facteur r, apparaît aussitôt.")
+    dessiner_texte(ecran, explication, x, y,
+                    police(16, italique=True), COULEUR_OR_CLAIR, )
+    y += 26
+    dessiner_texte(
+        ecran,
+        "Selon ce raisonnement, l'écart D0 × rᵏ n'est mathématiquement "
+        "jamais nul : Achille ne rattraperait donc JAMAIS la tortue.",
+        x, y, police(16, gras=True), COULEUR_OR)
+
+
+# ----------------------------------------------------------------------
+# Phase 2 : Résolution
+# ----------------------------------------------------------------------
+
+def dessiner_phase_resolution(ecran, etat, boutons):
+    dessiner_entete(ecran, "La résolution : la course réelle, en temps continu")
+
+    pygame.draw.line(ecran, COULEUR_ENCRE_DOUCE,
+                      (X_DEPART, Y_PISTE), (X_FIN_PISTE, Y_PISTE), 2)
+    pygame.draw.line(ecran, COULEUR_ENCRE_DOUCE,
+                      (X_DEPART, Y_PISTE - 14), (X_DEPART, Y_PISTE + 14), 2)
+    pygame.draw.line(ecran, COULEUR_OR,
+                      (X_FIN_PISTE, Y_PISTE - 20), (X_FIN_PISTE, Y_PISTE + 20), 3)
+    dessiner_texte(ecran, "Rattrapage réel", X_FIN_PISTE - 46, Y_PISTE - 42,
+                    police(14, italique=True), COULEUR_OR_CLAIR)
+
+    for marque in etat.marques_etapes_reel:
+        x_m = x_ecran(marque)
+        pygame.draw.line(ecran, COULEUR_ENCRE_DOUCE,
+                          (x_m, Y_PISTE - 6), (x_m, Y_PISTE + 6), 1)
+
+    x_tortue = x_ecran(etat.position_tortue_reel)
+    x_achille = x_ecran(etat.position_achille_reel)
+    _dessiner_marqueur_tortue(ecran, x_tortue, Y_PISTE)
+    _dessiner_marqueur_achille(ecran, x_achille, Y_PISTE)
+
+    _dessiner_panneau_resolution(ecran, etat)
+    for b in boutons:
+        b.dessiner(ecran)
+
+
+def _dessiner_panneau_resolution(ecran, etat):
+    panneau = pygame.Rect(X_DEPART - 20, 420, LARGEUR_PISTE_PIXELS + 40, 210)
+    pygame.draw.rect(ecran, COULEUR_PANNEAU, panneau, border_radius=14)
+    pygame.draw.rect(ecran, COULEUR_OR, panneau, width=2, border_radius=14)
+
+    x, y = panneau.left + 24, panneau.top + 16
+    ecart = etat.position_tortue_reel - etat.position_achille_reel
+
+    dessiner_texte(ecran, f"Étape {etat.numero_etape_reel}   —   "
+                          f"t = {etat.temps_ecoule_reel:.2f} s",
+                    x, y, police(24, gras=True), COULEUR_OR_CLAIR)
+    y += 36
+    dessiner_texte(
+        ecran, f"Position d'Achille : {etat.position_achille_reel:6.2f} m",
+        x, y, police(19), COULEUR_CREME)
+    y += 26
+    dessiner_texte(
+        ecran, f"Position de la tortue : {etat.position_tortue_reel:6.2f} m",
+        x, y, police(19), COULEUR_CREME)
+    y += 26
+    dessiner_texte(
+        ecran, f"Distance qui les sépare : {max(ecart, 0):6.2f} m",
+        x, y, police(19), COULEUR_CREME)
+    y += 32
+
+    if etat.termine_reel:
+        explication = (
+            f"Achille rattrape la tortue à t = {temps_rattrapage():.2f} s. "
+            "Contrairement à ce que suggérait le raisonnement de Zénon, "
+            "une infinité d'étapes de plus en plus petites tient bien "
+            "dans un temps fini : le paradoxe n'empêchait pas la réalité.")
+    elif not etat.en_cours_reel and etat.numero_etape_reel == 0:
+        explication = "Espace : lancer la course réelle."
+    else:
+        explication = (
+            "Cette fois, les deux coureurs avancent en continu, à leur "
+            "vraie vitesse : les étapes de Zénon se produisent d'elles-"
+            "mêmes, de plus en plus vite, à l'approche du rattrapage.")
+    dessiner_texte(ecran, explication, x, y,
+                    police(16, italique=True), COULEUR_OR_CLAIR)
+
+
+# ======================================================================
+# ÉVÉNEMENTS
+# ======================================================================
+
+def gerer_evenements(etat, boutons):
+    """Lit les événements Pygame. Renvoie False si l'utilisateur quitte."""
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            return False
+
+        clique_sur_bouton = False
+        for b in boutons:
+            if b.gerer_evenement(event):
+                clique_sur_bouton = True
+                break
+        if clique_sur_bouton:
+            continue
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_ESCAPE:
+                return False
+            if event.key == pygame.K_r:
+                etat.rejouer()
+            if event.key == pygame.K_SPACE:
+                if etat.mode == "paradoxe":
+                    etat.basculer_auto()
+                else:
+                    etat.basculer_course_reelle()
+    return True
+
+
+# ======================================================================
+# BOUCLE PRINCIPALE
+# ======================================================================
+
+def creer_boutons(etat):
+    """Construit les deux jeux de boutons (un par phase)."""
+    y = 645
+    boutons_paradoxe = [
+        Bouton(150, y, 190, 42, "Avancer (Espace)", etat.avancer_etape),
+        Bouton(360, y, 150, 42, "Auto", etat.basculer_auto),
+        Bouton(530, y, 140, 42, "Rejouer", etat.rejouer),
+        Bouton(690, y, 260, 42, "Voir la résolution →", etat.passer_a_resolution),
+    ]
+    boutons_resolution = [
+        Bouton(150, y, 260, 42, "← Revenir au paradoxe", etat.revenir_au_paradoxe),
+        Bouton(430, y, 140, 42, "Rejouer", etat.rejouer),
+    ]
+    return boutons_paradoxe, boutons_resolution
+
+
+def main():
+    pygame.init()
+    ecran = pygame.display.set_mode((LARGEUR_FENETRE, HAUTEUR_FENETRE))
+    pygame.display.set_caption("Le paradoxe d'Achille et la tortue")
+    horloge = pygame.time.Clock()
+
+    etat = EtatSimulation()
+    boutons_paradoxe, boutons_resolution = creer_boutons(etat)
+
+    en_cours_programme = True
+    while en_cours_programme:
+        dt = horloge.tick(FPS) / 1000
+
+        boutons_actifs = (boutons_paradoxe if etat.mode == "paradoxe"
+                           else boutons_resolution)
+        en_cours_programme = gerer_evenements(etat, boutons_actifs)
+        mettre_a_jour(etat, dt)
+
+        ecran.fill(COULEUR_FOND)
+        if etat.mode == "paradoxe":
+            dessiner_phase_paradoxe(ecran, etat, boutons_paradoxe)
+        else:
+            dessiner_phase_resolution(ecran, etat, boutons_resolution)
+        pygame.display.flip()
+
+    pygame.quit()
+    sys.exit()
+
+
+if __name__ == "__main__":
+    main()
