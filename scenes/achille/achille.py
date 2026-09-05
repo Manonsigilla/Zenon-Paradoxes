@@ -367,6 +367,10 @@ class ScenePhaseParadoxe(SceneParadoxe):
         super().__init__(manager)
         self.etat = EtatSimulation()
         self.etat.mode = "paradoxe"
+        # Boutons de cette phase : avancer une étape, passer à la résolution
+        self.rect_bouton_avancer = pygame.Rect(X_DEPART, 580, 240, 44)
+        self.rect_bouton_resolution = pygame.Rect(X_DEPART + 260, 580,
+                                                  280, 44)
 
     def on_entrer(self):
         super().on_entrer()
@@ -458,6 +462,18 @@ class ScenePhaseParadoxe(SceneParadoxe):
                 "petit d'un facteur r, apparaît aussitôt.")
         texte.dessiner_texte(ecran, explication, x, y,
                              theme.police(16, "italique"), COULEUR_OR_CLAIR)
+
+        # Boutons : Avancer une étape / Passer à la résolution
+        for rect, label in ((self.rect_bouton_avancer, "Avancer une étape"),
+                            (self.rect_bouton_resolution,
+                             "Passer à la résolution →")):
+            pygame.draw.rect(ecran, theme.SURFACE, rect, border_radius=10)
+            pygame.draw.rect(ecran, COULEUR_OR, rect, width=2,
+                             border_radius=10)
+            texte.dessiner_texte_centre(ecran, label, rect.centerx,
+                                        rect.centery - 11,
+                                        theme.police(16, "gras"),
+                                        COULEUR_CREME)
 
 
 class ScenePhaseResolution(SceneParadoxe):
