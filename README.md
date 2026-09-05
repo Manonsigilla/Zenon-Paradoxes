@@ -38,7 +38,7 @@ python main.py
 
 | Paradoxe | Qui | État |
 |---|---|---|
-| La flèche en vol | Angie | à faire |
+| La flèche en vol | Angie | **terminée**  |
 | La dichotomie | Manon | **terminée** |
 | Achille et la tortue | Rayene | à faire |
 | Socle commun + accueil | ensemble | terminé |
