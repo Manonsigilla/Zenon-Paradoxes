@@ -23,7 +23,7 @@ PARADOXES = [
     "dichotomie-0"),
     ("Γ", "Achille et la tortue",
     "Le plus rapide peut-il rattraper le plus lent ?",
-    "squelette-0"),
+    "achille-0"),
 ]
 
 LARGEUR_BOUTON = 620

@@ -8,7 +8,7 @@ Parcours : phase Paradoxe (raisonnement de Zénon) → phase Résolution
 (course réelle en temps continu).
 """
 
-from .achille_et_tortue import ScenePhaseParadoxe, ScenePhaseResolution
+from .achille import ScenePhaseParadoxe, ScenePhaseResolution
 
 NOM = "Achille et la tortue"
 etapes = [ScenePhaseParadoxe, ScenePhaseResolution]
