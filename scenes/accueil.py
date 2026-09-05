@@ -16,14 +16,14 @@ from ui import bouton, motifs, texte, theme
 # dès que le paradoxe correspondant existe.
 PARADOXES = [
     ("Α", "La flèche en vol",
-     "Le mouvement existe-t-il à l'instant ?",
-     "squelette-0"),
+    "Le mouvement existe-t-il à l'instant ?",
+    "fleche-0"),
     ("Β", "La dichotomie",
-     "Peut-on parcourir une distance finie ?",
-     "dichotomie-0"),
+    "Peut-on parcourir une distance finie ?",
+    "dichotomie-0"),
     ("Γ", "Achille et la tortue",
-     "Le plus rapide peut-il rattraper le plus lent ?",
-     "squelette-0"),
+    "Le plus rapide peut-il rattraper le plus lent ?",
+    "squelette-0"),
 ]
 
 LARGEUR_BOUTON = 620
@@ -70,7 +70,7 @@ class SceneAccueil(Scene):
 
         # Colonnade sous le titre
         motifs.dessiner_colonnade(ecran, centre_x - 230, 256, 460,
-                                  theme.OR, theme.OR_CLAIR, theme.ROUGE)
+                                theme.OR, theme.OR_CLAIR, theme.ROUGE)
 
         for b in self.boutons:
             b.dessiner(ecran)

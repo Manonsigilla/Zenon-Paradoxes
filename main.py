@@ -9,7 +9,7 @@ import pygame
 import config
 import sons
 from scene_manager import SceneManager
-from scenes import accueil, dichotomie, squelette
+from scenes import accueil, dichotomie, fleche, squelette
 
 
 def basculer_plein_ecran(manager):
@@ -35,6 +35,7 @@ def main():
     manager.enregistrer("accueil", accueil.SceneAccueil(manager))
     manager.ajouter_parcours("dichotomie", dichotomie)
     manager.ajouter_parcours("squelette", squelette)
+    manager.ajouter_parcours("fleche", fleche)
     # Dès qu'un paradoxe est prêt, par exemple :
     #     from scenes import fleche
     #     manager.ajouter_parcours("fleche", fleche)
